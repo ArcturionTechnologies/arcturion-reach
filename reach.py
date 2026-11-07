@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import re
 import sys
 import time
 
@@ -151,16 +150,15 @@ def send(mode: str, agent: str, body: str, session: str | None, to_all: bool) ->
 
 
 def known_agent(token: str) -> str | None:
-    """A leading token is only a target if it names a real agent workspace
-    (~/Desktop/<AGENT>). Otherwise it's just the first word of the message —
-    so `excuse-me we need to fix that` doesn't try to reach an agent 'we'."""
-    if not token:
+    """Resolve an immediate workspace name without treating paths as names."""
+    if not token or token in (".", "..") or "/" in token or "\\" in token:
         return None
-    cand = token.strip().upper()
-    if re.fullmatch(r"[A-Z][A-Z0-9_]{1,}", cand) and \
-            os.path.isdir(os.path.join(DESKTOP_DIR, cand)):
-        return cand
-    return None
+    with os.scandir(DESKTOP_DIR) as entries:
+        matches = [entry.name for entry in entries
+                   if entry.name.casefold() == token.casefold() and entry.is_dir()]
+    if len(matches) > 1:
+        raise ValueError("Ambiguous workspace name %r; rename conflicting workspaces." % token)
+    return matches[0] if matches else None
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -193,9 +191,18 @@ def main(argv: list[str] | None = None) -> int:
 
     tokens = list(args.rest)
     if args.to:
-        agent, body = args.to, " ".join(tokens)
+        try:
+            agent = known_agent(args.to) or args.to
+        except (OSError, ValueError) as exc:
+            print("Cannot resolve workspace: %s" % exc, file=sys.stderr)
+            return 2
+        body = " ".join(tokens)
     else:
-        lead = known_agent(tokens[0]) if tokens else None
+        try:
+            lead = known_agent(tokens[0]) if tokens else None
+        except (OSError, ValueError) as exc:
+            print("Cannot resolve workspace: %s" % exc, file=sys.stderr)
+            return 2
         if lead:
             # Explicitly named another agent → its busiest live session.
             agent, body = lead, " ".join(tokens[1:])

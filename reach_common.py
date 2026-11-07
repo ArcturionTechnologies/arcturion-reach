@@ -258,8 +258,8 @@ def live_sessions() -> list[dict]:
 
 def resolve(agent: str) -> list[dict]:
     """Live sessions for AGENT, most-recently-ACTIVE first (the one working now)."""
-    want = (agent or "").strip().upper()
+    want = (agent or "").strip().casefold()
     matches = [s for s in live_sessions()
-               if (s.get("agent") or "").upper() == want and s.get("sessionId")]
+               if (s.get("agent") or "").casefold() == want and s.get("sessionId")]
     matches.sort(key=lambda s: s.get("last_active", 0), reverse=True)
     return matches
