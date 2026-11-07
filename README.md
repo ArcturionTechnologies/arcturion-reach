@@ -35,4 +35,4 @@ This is best-effort local pickup, not an exactly-once or crash-durable delivery 
 
 Run `python -m unittest test_reach test_concurrency test_portability` with all four `REACH_*_DIR` variables directed to disposable directories. CI installs dependencies before applying its test isolation; tests use synthetic fixtures.
 
-The MIT license in this private candidate is proposed for original authored material. Source provenance and third-party rights require review and explicit release approval; see [PROVENANCE.md](PROVENANCE.md) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+[MIT](LICENSE) covers the original project material in this repository. See [PROVENANCE.md](PROVENANCE.md) for the source snapshot and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for separate runtime and build-tool terms.

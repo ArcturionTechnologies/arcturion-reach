@@ -1,6 +1,6 @@
 # Source provenance
 
-This candidate is based on the separately reviewed local Reach repair. The source headers do not identify an upstream project or license; an initial source search and scoped history inspection did not establish third-party copying or its absence. Original authorship and the proposed MIT license require rights review before release.
+This repository adapts an internal Arcturion mailbox tool, including a separately reviewed repair to its cooperating file writers and hooks. It begins with a source snapshot; it does not reproduce the original development history. The input hashes below identify that snapshot. The project license covers original Arcturion material; third-party runtime and build tools retain the terms recorded in THIRD_PARTY_NOTICES.md.
 
 SHA-256 of the accepted repair inputs:
 
