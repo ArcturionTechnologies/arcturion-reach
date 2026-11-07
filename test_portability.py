@@ -147,6 +147,52 @@ class WorkspaceTests(unittest.TestCase):
                 self.assertEqual(rc.drain('abc-1'), [])
                 self.assertEqual(rc.drain('abc-2'), [])
 
+    def test_options_can_be_interspersed_with_mode_and_message(self):
+        examples = [
+            ['--to', 'Design', '--session', 'session-1', '--all', 'interrupt', 'review', 'draft'],
+            ['interrupt', '--to', 'Design', 'review', '--session', 'session-1', 'draft', '--all'],
+            ['interrupt', 'review', 'draft', '--to', 'Design', '--all', '--session', 'session-1'],
+        ]
+        for argv in examples:
+            with self.subTest(argv=argv), mock.patch.object(reach, 'known_agent', return_value='Design') as lookup:
+                with mock.patch.object(reach, 'send', return_value=0) as send:
+                    self.assertEqual(reach.main(argv), 0)
+                    lookup.assert_called_once_with('Design')
+                    send.assert_called_once_with('interrupt', 'Design', 'review draft', 'session-1', True)
+
+    def test_interspersed_cli_routes_exact_synthetic_session(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root, sessions, projects, mailbox = (base / n for n in ('workspaces', 'sessions', 'projects', 'mailbox'))
+            writer, target = root / 'Writer', root / 'Design-Team'
+            writer.mkdir(parents=True); target.mkdir(); sessions.mkdir(); projects.mkdir()
+            for sid, cwd in [('writer-session', writer), ('target-session', target)]:
+                (sessions / (sid + '.json')).write_text(json.dumps(
+                    {'pid': os.getpid(), 'sessionId': sid, 'cwd': str(cwd), 'startedAt': 100}))
+            env = dict(os.environ, REACH_DESKTOP_DIR=str(root), REACH_SESSIONS_DIR=str(sessions),
+                       REACH_PROJECTS_DIR=str(projects), REACH_MAILBOX_DIR=str(mailbox),
+                       CLAUDE_CODE_SESSION_ID='writer-session')
+            cmd = [sys.executable, str(Path(__file__).with_name('reach.py')), 'interrupt',
+                   'review', '--to', 'design-team', '--session', 'target-session', '--', '--all', 'now']
+            result = subprocess.run(cmd, cwd=writer, env=env, capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            with mock.patch.object(rc, 'MAILBOX_DIR', str(mailbox)):
+                self.assertEqual([m['body'] for m in rc.drain('target-session')], ['review --all now'])
+                self.assertEqual(rc.drain('writer-session'), [])
+
+    def test_double_dash_keeps_option_like_message_text(self):
+        with mock.patch.object(reach, 'known_agent', return_value='Design'):
+            with mock.patch.object(reach, 'send', return_value=0) as send:
+                self.assertEqual(reach.main(['--to', 'Design', 'interrupt', '--', '--all', 'review']), 0)
+                send.assert_called_once_with('interrupt', 'Design', '--all review', None, False)
+
+    def test_unknown_option_is_rejected_without_sending(self):
+        with mock.patch.object(reach, 'send') as send, mock.patch.object(reach, 'send_to_session') as direct:
+            with self.assertRaises(SystemExit) as error:
+                reach.main(['interrupt', '--unknown-option', 'message'])
+            self.assertEqual(error.exception.code, 2)
+            send.assert_not_called(); direct.assert_not_called()
+
     def test_workspace_permission_error_still_fails_without_sending(self):
         with mock.patch.object(reach.os, 'scandir', side_effect=PermissionError('synthetic denial')):
             with mock.patch.object(reach, 'send_to_session') as direct:

@@ -186,7 +186,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(sys.argv[1:] if argv is None else argv)
+    args = build_parser().parse_intermixed_args(sys.argv[1:] if argv is None else argv)
     if args.list:
         return cmd_list()
     if args.agents:

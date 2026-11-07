@@ -23,6 +23,8 @@ Set `REACH_MAILBOX_DIR`, `REACH_SESSIONS_DIR`, and `REACH_PROJECTS_DIR` to direc
 
 For a configured workspace named `Design-Team`, `reach interrupt Design-Team "review draft"` selects that agent even when called from another session. Workspace names are matched without regard to case. `reach excuse-me "hello there"` addresses the current session when its first word is not a workspace name; use `reach excuse-me --to Design-Team "hello there"` to specify a target explicitly. A first word matching a workspace name is interpreted as a target, so choose `--to` when meaning could be unclear. Conflicting case-insensitive workspace names are rejected for named selection.
 
+Options may appear before or among the mode and message words. Use `--` before a message beginning with an option-like token, such as `--all`, to treat it as text.
+
 A session selector accepts an exact session ID or a prefix matching exactly one live session. An ambiguous prefix is rejected before anything is queued, including when combined with `--all`; `--all` without a selector explicitly reaches all live sessions for the agent. An unqualified message can still address its exact current session when the workspace directory is absent.
 
 ## Boundaries
