@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-reach-mailbox"
+version = "0.1.0"
+description = "A local, best-effort session mailbox and hook-output example"
+requires-python = ">=3.10"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = []
+classifiers = ["Operating System :: POSIX :: Linux", "Operating System :: MacOS"]
+
+[project.scripts]
+reach = "reach:main"
+
+[tool.setuptools]
+py-modules = ["reach", "reach_common", "reach_inject", "reach_stop_guard"]

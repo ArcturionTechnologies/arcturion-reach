@@ -1,0 +1,3 @@
+include PROVENANCE.md THIRD_PARTY_NOTICES.md
+include test_reach.py test_concurrency.py test_portability.py
+recursive-include examples *.py

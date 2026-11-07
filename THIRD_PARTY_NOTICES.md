@@ -1,0 +1,3 @@
+# Third-party notices
+
+Reach uses the Python standard library and declares no third-party runtime package dependencies. Python has its own [license](https://docs.python.org/3/license.html). Building the package uses separately installed [setuptools](https://github.com/pypa/setuptools/blob/main/LICENSE); its files are not bundled in this source tree. The possible presence of copied upstream source in the original Reach files has not been conclusively established or ruled out; review provenance before release. Distribution of a bundled interpreter or dependencies requires its own artifact-specific notice review.
