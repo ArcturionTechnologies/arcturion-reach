@@ -167,6 +167,8 @@ class SelfTargetTests(unittest.TestCase):
         env["REACH_MAILBOX_DIR"] = mailbox
         env["CLAUDE_CODE_SESSION_ID"] = "firing-123"
         env["REACH_SESSIONS_DIR"] = os.path.join(tmp, "sessions")
+        env["REACH_DESKTOP_DIR"] = os.path.join(tmp, "workspaces")
+        env["REACH_PROJECTS_DIR"] = os.path.join(tmp, "projects")
         proc = subprocess.run(
             [PY, os.path.join(HERE, "reach.py"), "excuse-me", "hello", "there"],
             env=env, capture_output=True, timeout=15)
@@ -186,11 +188,25 @@ class SelfTargetTests(unittest.TestCase):
         env = dict(os.environ)
         env["REACH_MAILBOX_DIR"] = os.path.join(tmp, "mailbox")
         env["CLAUDE_CODE_SESSION_ID"] = "firing-123"
-        # The synthetic desktop and session directory exercise explicit targeting.
+        root = os.path.join(tmp, "workspaces")
+        target = os.path.join(root, "POLARIS")
+        sessions = os.path.join(tmp, "sessions")
+        os.makedirs(target)
+        os.makedirs(sessions)
+        env["REACH_DESKTOP_DIR"] = root
+        env["REACH_SESSIONS_DIR"] = sessions
+        env["REACH_PROJECTS_DIR"] = os.path.join(tmp, "projects")
+        with open(os.path.join(sessions, "synthetic.json"), "w") as fh:
+            json.dump({"pid": os.getpid(), "sessionId": "polaris-synthetic",
+                       "cwd": target, "startedAt": 100}, fh)
         proc = subprocess.run(
             [PY, os.path.join(HERE, "reach.py"), "excuse-me", "POLARIS", "hi"],
             env=env, capture_output=True, timeout=15)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertNotIn(b"this window", proc.stdout + proc.stderr)
+        with open(os.path.join(tmp, "mailbox", "polaris-synthetic.jsonl")) as fh:
+            self.assertEqual(json.loads(fh.read())["body"], "hi")
+        self.assertFalse(os.path.exists(os.path.join(tmp, "mailbox", "firing-123.jsonl")))
 
 
 class HookIntegrationTests(unittest.TestCase):

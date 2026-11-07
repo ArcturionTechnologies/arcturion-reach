@@ -96,4 +96,64 @@ class WorkspaceTests(unittest.TestCase):
             self.assertIn('Ambiguous', result.stderr)
             self.assertFalse(mailbox.exists())
 
+    def test_missing_workspace_root_keeps_exact_current_session(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            sessions, projects, mailbox = (base / n for n in ('sessions', 'projects', 'mailbox'))
+            sessions.mkdir()
+            projects.mkdir()
+            env = dict(os.environ, REACH_DESKTOP_DIR=str(base / 'absent-workspaces'),
+                       REACH_SESSIONS_DIR=str(sessions), REACH_PROJECTS_DIR=str(projects),
+                       REACH_MAILBOX_DIR=str(mailbox), CLAUDE_CODE_SESSION_ID='current-synthetic')
+            result = subprocess.run([sys.executable, str(Path(__file__).with_name('reach.py')),
+                                     'interrupt', 'review draft'], cwd=base, env=env,
+                                    capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            with mock.patch.object(rc, 'MAILBOX_DIR', str(mailbox)):
+                self.assertEqual([m['body'] for m in rc.drain('current-synthetic')], ['review draft'])
+
+    def test_session_prefix_requires_one_match_before_any_enqueue(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root, sessions, projects, mailbox = (base / n for n in ('workspaces', 'sessions', 'projects', 'mailbox'))
+            writer = root / 'Writer'
+            writer.mkdir(parents=True)
+            sessions.mkdir()
+            projects.mkdir()
+            for sid in ('abc-1', 'abc-2'):
+                (sessions / (sid + '.json')).write_text(json.dumps(
+                    {'pid': os.getpid(), 'sessionId': sid, 'cwd': str(writer), 'startedAt': 100}))
+            env = dict(os.environ, REACH_DESKTOP_DIR=str(root), REACH_SESSIONS_DIR=str(sessions),
+                       REACH_PROJECTS_DIR=str(projects), REACH_MAILBOX_DIR=str(mailbox))
+            env.pop('CLAUDE_CODE_SESSION_ID', None)
+            for extra in ([], ['--all']):
+                with self.subTest(extra=extra):
+                    result = subprocess.run(
+                        [sys.executable, str(Path(__file__).with_name('reach.py')), '--to', 'Writer',
+                         '--session', 'abc', *extra, 'interrupt', 'review draft'],
+                        cwd=writer, env=env, capture_output=True, text=True, timeout=10)
+                    self.assertEqual(result.returncode, 2, result.stderr)
+                    self.assertIn('Ambiguous', result.stderr)
+                    self.assertFalse(mailbox.exists())
+            (sessions / 'abc.json').write_text(json.dumps(
+                {'pid': os.getpid(), 'sessionId': 'abc', 'cwd': str(writer), 'startedAt': 100}))
+            result = subprocess.run(
+                [sys.executable, str(Path(__file__).with_name('reach.py')), '--to', 'Writer',
+                 '--session', 'abc', 'interrupt', 'exact session'],
+                cwd=writer, env=env, capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            with mock.patch.object(rc, 'MAILBOX_DIR', str(mailbox)):
+                self.assertEqual([m['body'] for m in rc.drain('abc')], ['exact session'])
+                self.assertEqual(rc.drain('abc-1'), [])
+                self.assertEqual(rc.drain('abc-2'), [])
+
+    def test_workspace_permission_error_still_fails_without_sending(self):
+        with mock.patch.object(reach.os, 'scandir', side_effect=PermissionError('synthetic denial')):
+            with mock.patch.object(reach, 'send_to_session') as direct:
+                with mock.patch.object(reach, 'send') as named:
+                    self.assertEqual(reach.main(['interrupt', 'review draft']), 2)
+                    direct.assert_not_called()
+                    named.assert_not_called()
+
+
 if __name__ == '__main__': unittest.main()

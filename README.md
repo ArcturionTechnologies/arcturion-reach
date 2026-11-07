@@ -23,6 +23,8 @@ Set `REACH_MAILBOX_DIR`, `REACH_SESSIONS_DIR`, and `REACH_PROJECTS_DIR` to direc
 
 For a configured workspace named `Design-Team`, `reach interrupt Design-Team "review draft"` selects that agent even when called from another session. Workspace names are matched without regard to case. `reach excuse-me "hello there"` addresses the current session when its first word is not a workspace name; use `reach excuse-me --to Design-Team "hello there"` to specify a target explicitly. A first word matching a workspace name is interpreted as a target, so choose `--to` when meaning could be unclear. Conflicting case-insensitive workspace names are rejected for named selection.
 
+A session selector accepts an exact session ID or a prefix matching exactly one live session. An ambiguous prefix is rejected before anything is queued, including when combined with `--all`; `--all` without a selector explicitly reaches all live sessions for the agent. An unqualified message can still address its exact current session when the workspace directory is absent.
+
 ## Boundaries
 
 Cooperating writers and readers use a stable sidecar file with POSIX advisory locking; all participants must use the same protocol. Do not remove lock files while participants are running. Hook pickup is nonblocking: contention defers pickup, which requires a later host invocation. Malformed queued data is preserved and blocks pickup until repaired. Hook failures can be silent to avoid blocking the host.
@@ -31,6 +33,6 @@ This is best-effort local pickup, not an exactly-once or crash-durable delivery 
 
 ## Development and rights
 
-Run `python -m unittest test_reach test_concurrency test_portability` with all four `REACH_*_DIR` variables directed to disposable directories, including workspace children `ALTAIR` and `POLARIS`. CI installs dependencies before applying its test isolation; tests use synthetic fixtures.
+Run `python -m unittest test_reach test_concurrency test_portability` with all four `REACH_*_DIR` variables directed to disposable directories. CI installs dependencies before applying its test isolation; tests use synthetic fixtures.
 
 The MIT license in this private candidate is proposed for original authored material. Source provenance and third-party rights require review and explicit release approval; see [PROVENANCE.md](PROVENANCE.md) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

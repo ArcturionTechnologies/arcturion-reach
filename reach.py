@@ -119,11 +119,16 @@ def send(mode: str, agent: str, body: str, session: str | None, to_all: bool) ->
         return 1
 
     if session:
-        matches = [s for s in matches if s.get("sessionId", "").startswith(session)]
+        exact = [s for s in matches if s.get("sessionId") == session]
+        matches = exact or [s for s in matches if s.get("sessionId", "").startswith(session)]
         if not matches:
             print("No live %s session matches --session %s." % (agent.upper(), session),
                   file=sys.stderr)
             return 1
+        if len(matches) > 1:
+            print("Ambiguous --session prefix %r; use a longer prefix or an exact session ID." % session,
+                  file=sys.stderr)
+            return 2
 
     # Default: hit the single most-recently-ACTIVE session (the one working now).
     # --all broadcasts to every live session of the agent.
@@ -153,9 +158,12 @@ def known_agent(token: str) -> str | None:
     """Resolve an immediate workspace name without treating paths as names."""
     if not token or token in (".", "..") or "/" in token or "\\" in token:
         return None
-    with os.scandir(DESKTOP_DIR) as entries:
-        matches = [entry.name for entry in entries
-                   if entry.name.casefold() == token.casefold() and entry.is_dir()]
+    try:
+        with os.scandir(DESKTOP_DIR) as entries:
+            matches = [entry.name for entry in entries
+                       if entry.name.casefold() == token.casefold() and entry.is_dir()]
+    except FileNotFoundError:
+        return None
     if len(matches) > 1:
         raise ValueError("Ambiguous workspace name %r; rename conflicting workspaces." % token)
     return matches[0] if matches else None

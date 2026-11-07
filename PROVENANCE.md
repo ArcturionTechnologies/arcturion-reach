@@ -15,3 +15,5 @@ SHA-256 of the accepted repair inputs:
 | test_concurrency.py | 0ea397376158083b9e424b97f78080d0c62981f52fed9f59962053068adb9dd7 |
 
 The hook modules and concurrency tests are copied unchanged. The common module adds a configurable workspace root and casefolded session matching, the CLI adds a console-compatible entry point and resolves positional workspace names case-insensitively without unsafe current-session fallback on ambiguous names, and existing tests use synthetic configured workspace roots. The README is rewritten. Packaging, portability tests, the demo, CI, license proposal, and notices are new. Locking, nonblocking hook pickup, and malformed-data handling retain the accepted repair behavior.
+
+Additional routing review: exact session IDs take precedence over prefix matches; ambiguous prefixes fail before enqueue, and a missing workspace root does not block explicit current-session pickup. The self-target tests construct all workspace and session paths rather than relying on their invoking environment. Permission errors and ambiguous workspace names continue to fail without sending.
